@@ -1,0 +1,39 @@
+sensor.veiculo
+{
+  "id_veiculo": "carro_123",
+  "id_via": "via_A_norte",
+  "timestamp": 1715620000
+}
+
+cruzamento.status
+{
+  "id_cruzamento": "cruzamento_01",
+  "status_sinal": "VERMELHO", // ou "VERDE"
+  "tamanho_fila": 5,
+  "timestamp": 1715620005
+}
+
+cruzamento.alerta
+{
+  "id_cruzamento": "cruzamento_01",
+  "mensagem": "Tempo de espera excedido",
+  "tempo_espera_segundos": 65,
+  "prioridade": "ALTA"
+}
+
+orquestrador.comando
+{
+  "id_cruzamento_alvo": "cruzamento_01",
+  "comando": "ABRIR", // ou "FECHAR"
+  "id_transacao": "cmd_9988"
+}
+
+sistema.configuracao
+{
+  "tipo_evento": "INICIAR_SIMULACAO", // ou "ATUALIZAR_PARAMETROS"
+  "dados_grafo": {
+    "nodos": ["cruzamento_01", "cruzamento_02"],
+    "arestas": [{"de": "cruzamento_01", "para": "cruzamento_02"}]
+  },
+  "qtd_veiculos": 50
+}
