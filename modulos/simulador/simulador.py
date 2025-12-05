@@ -1,4 +1,5 @@
 import asyncio
+import os
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
 import json
@@ -63,6 +64,10 @@ class Simulador:
         self.producer.close()
 
 if __name__ == "__main__":
-    simulador = Simulador(kafka_broker="localhost:9092")
+    # Tenta pegar a variável de ambiente, se não achar, usa localhost (para testes fora do docker)
+    kafka_broker = os.getenv('KAFKA_BROKER', "localhost:9092")
+    
+    print(f"Iniciando simulador conectando em: {kafka_broker}")
+    simulador = Simulador(kafka_broker=kafka_broker)
     asyncio.run(simulador.executar_simulacao(duracao_segundos=60, intervalo=5))
     

@@ -1,0 +1,62 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+    # --- Módulo Visualizar: Backend (API) ---
+  backend:
+    build: 
+      context: ./modulos/visualizar/backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - kafka
+    volumes:
+      - ./modulos/visualizar/backend:/app  # Hot-reload: reflete mudanças no código instantaneamente
+    environment:
+      KAFKA_BROKER: kafka:9092
+
+  # --- Módulo Visualizar: Frontend (React) ---
+  frontend:
+    build:
+      context: ./modulos/visualizar/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./modulos/visualizar/frontend:/app
+      - /app/node_modules # Evita sobrescrever node_modules do container com o da máquina local
+
+# --- Módulo Simulador ---
+  simulador:
+    build:
+      context: ./modulos/simulador
+      dockerfile: Dockerfile
+    # Montamos o requirements.txt da raiz para dentro do contexto do build
+    # Se der erro de "file not found", copie o requirements.txt para a pasta modulos/simulador manualmente
+    environment:
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+    # O simulador é um script que roda e para (batch) ou roda continuo?
+    # Pelo código, ele roda por 60s. O restart garante que ele rode de novo se quiser loop.
+    restart: "no"
