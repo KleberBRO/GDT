@@ -1,25 +1,45 @@
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: confluentinc/cp-zookeeper:7.4.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    healthcheck:
+      test: echo srvr | nc localhost 2181 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kafka:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:7.4.0
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
-      - "9092:9092"
+      # Mapeia a porta 9092 do seu PC para a 29092 do container (listener externo)
+      - "9092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      # Define explicitamente onde o Kafka deve "escutar" dentro do container
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      # Define como os clientes devem encontrar o Kafka
+      # PLAINTEXT: Para backend/simulador (dentro do docker) -> kafka:9092
+      # PLAINTEXT_HOST: Para você/browser (fora do docker) -> localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      # Verifica a porta interna (9092)
+      test: nc -z localhost 9092 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
-    # --- Módulo Visualizar: Backend (API) ---
   backend:
     build: 
       context: ./modulos/visualizar/backend
@@ -27,13 +47,14 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     volumes:
-      - ./modulos/visualizar/backend:/app  # Hot-reload: reflete mudanças no código instantaneamente
+      - ./modulos/visualizar/backend:/app
     environment:
+      # Backend continua usando a porta interna 9092
       KAFKA_BROKER: kafka:9092
 
-  # --- Módulo Visualizar: Frontend (React) ---
   frontend:
     build:
       context: ./modulos/visualizar/frontend
@@ -44,19 +65,16 @@ services:
       - backend
     volumes:
       - ./modulos/visualizar/frontend:/app
-      - /app/node_modules # Evita sobrescrever node_modules do container com o da máquina local
+      - /app/node_modules
 
-# --- Módulo Simulador ---
   simulador:
     build:
       context: ./modulos/simulador
       dockerfile: Dockerfile
-    # Montamos o requirements.txt da raiz para dentro do contexto do build
-    # Se der erro de "file not found", copie o requirements.txt para a pasta modulos/simulador manualmente
     environment:
+      # Simulador continua usando a porta interna 9092
       - KAFKA_BROKER=kafka:9092
     depends_on:
-      - kafka
-    # O simulador é um script que roda e para (batch) ou roda continuo?
-    # Pelo código, ele roda por 60s. O restart garante que ele rode de novo se quiser loop.
+      kafka:
+        condition: service_healthy
     restart: "no"
