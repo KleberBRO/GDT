@@ -5,14 +5,18 @@ import ReactFlow, {
   Controls, 
   applyEdgeChanges, 
   applyNodeChanges,
-  ReactFlowProvider
+  ReactFlowProvider,
+  getConnectedEdges
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-import TrafficLightNode from './components/NoCruzamento';
+import NoCruzamento from './components/NoCruzamento';
+import CustomEdge from './components/CustomEdge';
 
 // Registrar o tipo de nó personalizado
-const nodeTypes = { trafficLight: TrafficLightNode };
+const nodeTypes = { trafficLight: NoCruzamento };
+
+const edgeTypes = { custom: CustomEdge };
 
 const initialNodes = [
   { 
@@ -41,9 +45,30 @@ export default function App() {
   
   // Conectar duas vias (Cria uma aresta no grafo)
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge({ ...params, animated: true, label: 'Via' }, eds)),
+      (params) => setEdges((eds) => addEdge({ 
+        ...params, 
+        type: 'customEdge', // Define que usará nossa aresta personalizada
+        animated: true, 
+        data: { queueCount: 0 } // Inicia a fila zerada na aresta
+      }, eds)),
+      []
+  );
+
+  const onNodesDelete = useCallback(
+    (deleted) => {
+      setEdges((eds) => {
+        const connectedEdges = getConnectedEdges(deleted, eds);
+        return eds.filter(
+          (e) => !connectedEdges.some((ce) => ce.id === e.id)
+        );
+      });
+    },
     []
   );
+
+  const onEdgeDoubleClick = useCallback((event, edge) => {
+    setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+  }, []);
 
   // Função para adicionar novo cruzamento (Requisito: adicionar novos cruzamentos )
   const addIntersection = () => {
@@ -63,18 +88,20 @@ export default function App() {
       <div style={{ position: 'absolute', zIndex: 10, padding: 10, background: 'rgba(255,255,255,0.8)' }}>
         <h3>Controle da Simulação</h3>
         <button onClick={addIntersection}>+ Adicionar Cruzamento</button>
-        {/* Aqui você adicionaria controles para enviar ao Kafka via FastAPI  */}
+        <button onClick={() => alert('Iniciar Simulação')}>Iniciar Simulação</button>
       </div>
 
-      {/* Wrap com ReactFlowProvider para garantir o contexto */}
       <ReactFlowProvider>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
+          onNodesDelete={onNodesDelete}
+          onEdgeDoubleClick={onEdgeDoubleClick}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           fitView
         >
           <Background />
@@ -84,4 +111,3 @@ export default function App() {
     </div>
   );
 }
-// ...existing code...
