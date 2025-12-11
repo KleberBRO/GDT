@@ -9,6 +9,7 @@ import ReactFlow, {
   getConnectedEdges
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import './App.css';
 
 import NoCruzamento from './components/NoCruzamento';
 import CustomEdge from './components/CustomEdge';
@@ -31,6 +32,8 @@ const initialEdges = [];
 export default function App() {
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
+  const [qtdVeiculos, setQtdVeiculos] = useState(50);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:8000/ws');
@@ -74,7 +77,7 @@ export default function App() {
                 ...node.data,
                 status: visualStatus,
                 queueCount: data.tamanho_fila || node.data.queueCount,
-                longwaitAler: (data.tamanho_fila > 10)
+                longwaitAlert: (data.tamanho_fila > 10)
               }
             };
           }
@@ -96,17 +99,22 @@ export default function App() {
   
   // Conectar duas vias (Cria uma aresta no grafo)
   const onConnect = useCallback(
-      (params) => setEdges((eds) => addEdge({ 
-        ...params, 
-        type: 'customEdge', // Define que usará nossa aresta personalizada
-        animated: true, 
-        data: { queueCount: 0 } // Inicia a fila zerada na aresta
-      }, eds)),
-      []
+      (params) => {
+        // Bloqueia conexão manual se estiver simulando (redundante com props, mas seguro)
+        if (isSimulating) return; 
+        setEdges((eds) => addEdge({ 
+          ...params, 
+          type: 'customEdge', 
+          animated: true, 
+          data: { queueCount: 0 } 
+        }, eds));
+      },
+      [isSimulating]
   );
 
   const onNodesDelete = useCallback(
     (deleted) => {
+      if (isSimulating) return;
       setEdges((eds) => {
         const connectedEdges = getConnectedEdges(deleted, eds);
         return eds.filter(
@@ -114,15 +122,18 @@ export default function App() {
         );
       });
     },
-    []
+    [isSimulating]
   );
 
   const onEdgeDoubleClick = useCallback((event, edge) => {
+    if (isSimulating) return; // Bloqueia deleção por duplo clique durante simulação
     setEdges((eds) => eds.filter((e) => e.id !== edge.id));
-  }, []);
+  }, [isSimulating]);
 
   // Função para adicionar novo cruzamento (Requisito: adicionar novos cruzamentos )
   const addIntersection = () => {
+    if (isSimulating) return;
+
     const newId = (nodes.length + 1).toString();
     const newNode = {
       id: newId,
@@ -133,36 +144,80 @@ export default function App() {
     setNodes((nds) => nds.concat(newNode));
   };
 
-  const startSimulation = async () => {
+const toggleSimulation = async () => {
+    // Define o tipo de evento baseado no estado atual
+    const eventType = isSimulating ? 'PARAR_SIMULACAO' : 'INICIAR_SIMULACAO';
+    
     const payload = {
-      tipo_evento: 'INICIAR_SIMULACAO',
-      qtd_veiculos: 50,
+      tipo_evento: eventType,
+      qtd_veiculos: isSimulating ? 0 : 50, // Se estiver parando, zeramos ou ignoramos
       dados_grafo: {
         nodos: nodes.map(n => n.id),
-        arestas: edges.map(e => '${e.source}-${e.target}')
+        // Correção importante: uso de crase (`) para template string
+        arestas: edges.map(e => `${e.source}-${e.target}`) 
       }
     };
 
     try {
+      // O Backend enviará este payload para o Kafka (tópico sistema.configuracao)
       await fetch('http://localhost:8000/configurar-simulacao', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      alert('Simulação iniciada com sucesso!');
+
+      // Atualiza o estado e avisa o usuário
+      if (isSimulating) {
+        alert('Simulação parada! Mensagem enviada ao Kafka.');
+        setIsSimulating(false);
+      } else {
+        alert('Simulação iniciada com sucesso!');
+        setIsSimulating(true);
+      }
+
     } catch (error) {
-      console.error('Erro ao iniciar simulação:', error);
-      alert('Falha ao iniciar simulação.');
+      console.error('Erro ao comunicar com simulação:', error);
+      alert('Falha ao comunicar com o servidor.');
     }
-  }; 
+  };
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
       {/* Barra de Ferramentas / Controles de Simulação */}
-      <div style={{ position: 'absolute', zIndex: 10, padding: 10, background: 'rgba(255,255,255,0.8)' }}>
+      <div className='controls-container'>
         <h3>Controle da Simulação</h3>
-        <button onClick={addIntersection}>+ Adicionar Cruzamento</button>
-        <button onClick={startSimulation}>Iniciar Simulação</button>
+
+        <div>
+        <label>Qtd Veículos:</label>
+        <input
+          type="number"
+          value={qtdVeiculos}
+          onChange={(e) => setQtdVeiculos(e.target.value)}
+          style={{ width: '60px', marginLeft: '5px' }}
+          min="1"
+        />
+        </div>
+
+        <button 
+          onClick={addIntersection}
+          disabled={isSimulating}
+          className="control-button btn-add"
+        >+ Add Cruzamento</button>
+
+        <button onClick={toggleSimulation} 
+        className={`control-button ${isSimulating ? 'btn-stop' : ''}`}
+        >
+          {isSimulating ? "Parar Simulação" : "Iniciar Simulação"}
+          
+        </button>
+
+        <div>
+          <h4>dicas</h4>
+          <p>Use backspace para deletar nós e arestas</p>
+          <p>preto = origem</p>
+          <p>azul = destino</p>
+        </div>
+
       </div>
 
       <ReactFlowProvider>
@@ -176,6 +231,10 @@ export default function App() {
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
+
+          nodesConnectable={!isSimulating} 
+          elementsSelectable={!isSimulating}
+          deleteKeyCode={isSimulating ? null : ['Backspace', ['Delete']]}
           fitView
         >
           <Background />

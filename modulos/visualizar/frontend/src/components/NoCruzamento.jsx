@@ -55,7 +55,7 @@ const noCruzamento = ({ data }) => {
           type="target" 
           position={Position.Top} 
           id="top-target" 
-          style={{left:'30%'}}
+          style={{left:'30%', backgroundColor: 'blue'}}
       />
       <Handle type="source" 
         position={Position.Top} 
@@ -67,7 +67,7 @@ const noCruzamento = ({ data }) => {
       <Handle type="target" 
         position={Position.Bottom} 
         id="bottom-target" 
-        style={{left:'70%'}}
+        style={{left:'70%', backgroundColor: 'blue'}}
       />
       <Handle type="source" 
         position={Position.Bottom} 
@@ -78,7 +78,7 @@ const noCruzamento = ({ data }) => {
       <Handle type="target"
         position={Position.Left}
         id="left-target" 
-        style={{top:'30%'}}
+        style={{top:'30%', backgroundColor: 'blue'}}
        />
 
       <Handle type="source"
@@ -90,7 +90,7 @@ const noCruzamento = ({ data }) => {
       <Handle type="target" 
         position={Position.Right} 
         id="right-target" 
-        style={{top:'70%'}}
+        style={{top:'70%', backgroundColor: 'blue'}}
       />
 
       <Handle type="source" 

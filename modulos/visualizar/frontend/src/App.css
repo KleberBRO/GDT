@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+body, button, input {
+  font-family: 'Roboto', sans-serif;
+}
+
+.controls-container {
+  position: absolute;
+  z-index: 10;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.9); 
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.controls-container h3 {
+  margin: 0 0 5px 0;
+  font-size: 1.1rem;
+  color: #333;
+  text-align: center;
+}
+
+.controls-container p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Estilo geral dos botões */
+.control-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  background-color: #007bff; /* Azul padrão */
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.control-button:hover {
+  background-color: #0056b3; /* Azul mais escuro ao passar o mouse */
+}
+
+.control-button:active {
+  transform: scale(0.98);
+}
+
+/* Botão de Adicionar (Estilo específico opcional) */
+.btn-add {
+  background-color: #28a745; /* Verde */
+}
+
+.btn-add:hover {
+  background-color: #218838;
+}
+
+/* Botão de Parar (Vermelho) */
+.btn-stop {
+  background-color: #dc3545;
+}
+
+.btn-stop:hover {
+  background-color: #c82333;
+}
+
+/* Estado desabilitado */
+.control-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
