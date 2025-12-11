@@ -104,7 +104,7 @@ export default function App() {
         if (isSimulating) return; 
         setEdges((eds) => addEdge({ 
           ...params, 
-          type: 'customEdge', 
+          type: 'custom', 
           animated: true, 
           data: { queueCount: 0 } 
         }, eds));
@@ -168,10 +168,8 @@ const toggleSimulation = async () => {
 
       // Atualiza o estado e avisa o usuário
       if (isSimulating) {
-        alert('Simulação parada! Mensagem enviada ao Kafka.');
         setIsSimulating(false);
       } else {
-        alert('Simulação iniciada com sucesso!');
         setIsSimulating(true);
       }
 
