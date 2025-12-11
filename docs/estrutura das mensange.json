@@ -25,7 +25,7 @@ sistema.configuracao
   "tipo_evento": "INICIAR_SIMULACAO", // ou "ATUALIZAR_PARAMETROS"
   "dados_grafo": {
     "nodos": ["cruzamento_01", "cruzamento_02"],
-    "arestas": ["01-02", "02-01"] // de "cruzamento_01" para "cruzamento_02" e vice-versa
+    "arestas": ["01-02-N", "02-01-S"] // de "cruzamento_01" para "cruzamento_02" lado Norte e vice-versa
   },
   "qtd_veiculos": 50
 }

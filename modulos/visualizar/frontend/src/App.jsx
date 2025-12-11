@@ -69,7 +69,7 @@ export default function App() {
           if (node.id === data.id_cruzamento) {
             let visualStatus = 'VERMELHO';
             if (data.status === 'N-S') visualStatus = 'VERDE';
-            else if (data.status === 'L-O') visualStatus = 'VERDER_H';
+            else if (data.status === 'L-O') visualStatus = 'VERDE_H';
 
             return {
               ...node,
@@ -145,33 +145,49 @@ export default function App() {
   };
 
 const toggleSimulation = async () => {
-    // Define o tipo de evento baseado no estado atual
     const eventType = isSimulating ? 'PARAR_SIMULACAO' : 'INICIAR_SIMULACAO';
     
+    const arestasFormatadas = edges.map(e => {
+        const sourceNode = nodes.find(n => n.id === e.source);
+        const targetNode = nodes.find(n => n.id === e.target);
+        let dir = 'N'; // Valor padrão
+
+        if (sourceNode && targetNode) {
+             const dx = targetNode.position.x - sourceNode.position.x;
+             const dy = targetNode.position.y - sourceNode.position.y;
+             
+             // Verifica se é mais vertical ou horizontal
+             if (Math.abs(dx) > Math.abs(dy)) {
+                 // Horizontal
+                 // Se dx > 0, alvo está à direita, logo origem está à esquerda (Oeste/West)
+                 dir = dx > 0 ? 'O' : 'L'; 
+             } else {
+                 // Vertical
+                 // Se dy > 0, alvo está abaixo, logo origem está acima (Norte)
+                 dir = dy > 0 ? 'N' : 'S';
+             }
+        }
+        // Formato: 01-02-N
+        return `${e.source}-${e.target}-${dir}`;
+    });
+
     const payload = {
       tipo_evento: eventType,
-      qtd_veiculos: isSimulating ? 0 : 50, // Se estiver parando, zeramos ou ignoramos
+      qtd_veiculos: isSimulating ? 0 : Number(qtdVeiculos),
       dados_grafo: {
         nodos: nodes.map(n => n.id),
-        // Correção importante: uso de crase (`) para template string
-        arestas: edges.map(e => `${e.source}-${e.target}`) 
+        arestas: arestasFormatadas // Usando a nova lista formatada
       }
     };
 
     try {
-      // O Backend enviará este payload para o Kafka (tópico sistema.configuracao)
       await fetch('http://localhost:8000/configurar-simulacao', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      // Atualiza o estado e avisa o usuário
-      if (isSimulating) {
-        setIsSimulating(false);
-      } else {
-        setIsSimulating(true);
-      }
+      setIsSimulating(!isSimulating);
 
     } catch (error) {
       console.error('Erro ao comunicar com simulação:', error);
