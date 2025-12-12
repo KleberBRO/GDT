@@ -10,7 +10,7 @@ public class CruzamentoProducer {
 
     public CruzamentoProducer(KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
-    }
+    } //construtor
 
 
     //envia a mensgagem do tipo CruzamentoStatus do semáforo para o orquestrador, no tópico cruzamento.telemetria declarado no send
@@ -32,7 +32,7 @@ public class CruzamentoProducer {
                 });
     }
 
-    //envia alerta de uma espera longa no tópico cruzamento.alerta
+    //envia alerta de uma espera longa no tópico cruzamento.alerta para o orquestrador
     public void enviarAlerta(CruzamentoAlerta alerta) {
         String idCruzamento= alerta.getIdCruzamento();
         kafkaTemplate.send("cruzamento.alerta", idCruzamento, alerta); //<-----------------------------------------------implementar este tópico para o orquestrador comsumir isso [implementar orquetsrador consumidor]

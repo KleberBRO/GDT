@@ -1,36 +1,35 @@
 @Service
 public class CruzamentoService {
 
+    private final CruzamentoRepository repository;
     private final CruzamentoProducer producer;
-    private int tamanhoFila = 0;
-    private String statusSinal = "VERMELHO"; // Status inicial
 
-    public CruzamentoService(CruzamentoProducer producer) {
+    public CruzamentoService(CruzamentoProducer producer, CruzamentoRepository repository) {
         this.producer = producer;
-        iniciarMonitoramento();// Inicia um loop para checar alertas periodicamente e enviar status
+        this.repository = repository;
     }
 
     //quando um veículo chega no cruzamento
-    //ATUALIZAR A ADIÇÃO, ACHO QUE NÃO ENTENDEU
-    public void adicionarVeiculoNaFila(String idVia) {
-        // busca o cruzamento pela id
+    public void adicionarVeiculoNaFila(String idVia, String idCruzamento) {
+        //Busca o cruzamento
         Cruzamento cruzamento = repository.findById(idCruzamento)
-                .orElseThrow(() -> new RuntimeException("Cruzamento não encontrado: " + idCruzamento));
+                .orElseThrow(() -> new RuntimeException("Cruzamento não encontrado: " + idCruzamento)); // [cite: 96] (Referência)
 
-        // 2. Atualiza a fila da via
+        //atualiza a fila da via específica
+        // Usa getOrDefault para obter o valor atual ou 0 se a via não existir no Map ainda.
         int filaAtual = cruzamento.getFilasPorVia().getOrDefault(idVia, 0);
-        cruzamento.getFilasPorVia().put(idVia, filaAtual + 1);
+        cruzamento.getFilasPorVia().put(idVia, filaAtual + 1); // Incrementa o contador da via
 
-        // 3. Lógica de início de espera (se a fila estava vazia e o sinal está vermelho)
+        // 3. Lógica de início de espera (se for o primeiro carro a chegar E o sinal estiver VERMELHO)
         if (filaAtual == 0 && cruzamento.getStatusSinal() == StatusSinal.VERMELHO && cruzamento.getInicioEspera() == 0) {
-            cruzamento.setInicioEspera(System.currentTimeMillis());
+            cruzamento.setInicioEspera(System.currentTimeMillis()); //isso vai refletir em iniciarMonitoramento()
         }
 
-        repository.save(cruzamento);  // salva a alteração
-        enviarStatusAtual();// Toda vez que a fila muda, o status deve ser enviado
+        repository.save(cruzamento);  // Salva a alteração
+        enviarStatusAtual(cruzamento); // Envia o status atual do cruzamento
     }
 
-   //segue o comando do rquestrador de abrir ou fechar
+   //segue o comando do orquestrador de abrir ou fechar
     public void executarComando(String idCruzamentoAlvo, String comando) {
 
         // busca o cruzamento
@@ -61,19 +60,25 @@ public class CruzamentoService {
         System.out.println("Comando executado: " + comando + " para o cruzamento " + idCruzamentoAlvo + ". Novo status: " + novoStatus);
     }
 
-    //ATUALIZAR ANTES PARA PODER RECEBER O CRUZAMENTO
+    // ATUALIZADO: Recebe a entidade Cruzamento para enviar dados de telemetria corretos.
     private void enviarStatusAtual(Cruzamento cruzamento) {
 
         CruzamentoStatus status = new CruzamentoStatus();
-        status.setIdCruzamento("cruzamento_01"); // mudar se houver vários cruzamentos
-        status.setStatusSinal(this.statusSinal);
-        status.setTamanhoFila(this.tamanhoFila);
-        status.setTimestamp(System.currentTimeMillis() / 1000);
+        status.setIdCruzamento(cruzamento.getId()); // Usa o ID real do cruzamento [cite: 105] (Referência)
+        status.setStatusSinal(cruzamento.getStatusSinal().name()); // Usa o status real (VERDE/VERMELHO) [cite: 100] (Referência)
 
-        producer.enviarStatus(status); //chama o produtor para gerar a mensagem que vai ser enviada para o Orquestrador
+        // Calcula o tamanho total da fila (soma de todas as filas por via)
+        int tamanhoTotalFila = cruzamento.getFilasPorVia().values().stream()
+                .mapToInt(Integer::intValue)
+                .sum();
+
+        status.setTamanhoFila(tamanhoTotalFila); // Envia o tamanho total da fila
+        status.setTimestamp(System.currentTimeMillis() / 1000); // [cite: 105] (Referência)
+
+        producer.enviarStatus(status); // [cite: 106] (Referência)
     }
 
-
+    // Inicia um loop para checar alertas periodicamente e enviar status
     //executa a cada 5 segundos para checar o limite de 1 minuto.
     @Scheduled(fixedRate = 5000) // 5000ms = 5 segundos
     private void iniciarMonitoramento() {
