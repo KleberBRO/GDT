@@ -18,7 +18,8 @@ export default function App() {
     onNodesChange, onEdgesChange,
     onConnect, onNodesDelete, onEdgeDoubleClick,
     addIntersection, toggleSimulation,
-    qtdVeiculos, setQtdVeiculos, isSimulating
+    qtdVeiculos, setQtdVeiculos, isSimulating,
+    exportGraph, importGraph
   } = useTrafficSimulation();
 
   return (
@@ -30,6 +31,8 @@ export default function App() {
         addIntersection={addIntersection}
         toggleSimulation={toggleSimulation}
         isSimulating={isSimulating}
+        exportGraph={exportGraph}
+        importGraph={importGraph}
       />
 
       <ReactFlowProvider>

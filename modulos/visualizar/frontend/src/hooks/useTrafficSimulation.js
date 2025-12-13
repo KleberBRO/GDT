@@ -116,6 +116,53 @@ export function useTrafficSimulation() {
     setNodes((nds) => nds.concat(newNode));
   };
 
+  const exportGraph = useCallback(() => {
+    // Cria um objeto com os dados atuais
+    const graphData = { nodes, edges };
+    
+    // Converte para string JSON
+    const jsonString = JSON.stringify(graphData, null, 2);
+    
+    // Cria um Blob e um link temporário para download
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = "grafo_transito.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [nodes, edges]);
+
+const importGraph = useCallback((event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target.result);
+        
+        if (json.nodes && json.edges) {
+          if (isSimulating) {
+            alert("Pare a simulação antes de carregar um novo grafo.");
+            return;
+          }
+          setNodes(json.nodes);
+          setEdges(json.edges);
+        } else {
+          alert("Arquivo inválido.");
+        }
+      } catch (error) {
+        console.error("Erro ao ler o arquivo JSON:", error);
+        alert("Erro ao processar o arquivo.");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; 
+    
+  }, [isSimulating]);
+
   const toggleSimulation = async () => {
     const eventType = isSimulating ? 'PARAR_SIMULACAO' : 'INICIAR_SIMULACAO';
     
@@ -164,6 +211,7 @@ export function useTrafficSimulation() {
     onNodesChange, onEdgesChange,
     onConnect, onNodesDelete, onEdgeDoubleClick,
     addIntersection, toggleSimulation,
-    qtdVeiculos, setQtdVeiculos, isSimulating
+    qtdVeiculos, setQtdVeiculos, isSimulating,
+    exportGraph, importGraph
   };
 }

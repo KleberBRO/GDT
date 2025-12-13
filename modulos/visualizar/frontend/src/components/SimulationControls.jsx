@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useRef } from 'react';
 
 export default function SimulationControls({ 
   qtdVeiculos, 
   setQtdVeiculos, 
   addIntersection, 
   toggleSimulation, 
-  isSimulating 
+  isSimulating,
+  exportGraph,
+  importGraph
 }) {
+  const fileInputRef = useRef(null);
+
   return (
     <div className='controls-container'>
       <h3>Controle da Simulação</h3>
@@ -33,6 +37,34 @@ export default function SimulationControls({
       >
         {isSimulating ? "Parar Simulação" : "Iniciar Simulação"}
       </button>
+
+      {/* Botões de Importar/Exportar */}
+      <div style={{ display: 'flex', gap: '5px', flexDirection: 'column', marginTop: '10px' }}>
+        <button onClick={exportGraph} className="control-button" disabled={isSimulating}>
+          💾 Salvar Grafo
+        </button>
+        
+        <button 
+          onClick={() => fileInputRef.current.click()} 
+          className="control-button" 
+          disabled={isSimulating}
+          style={{ backgroundColor: '#6c757d' }} // Cor diferente opcional
+        >
+          BsFolderOpen Carregar Grafo
+        </button>
+        
+        {/* Input oculto para selecionar o arquivo */}
+        <input 
+          type="file" 
+          ref={fileInputRef}
+          style={{ display: 'none' }} 
+          accept=".json"
+          onChange={importGraph}
+        />
+      </div>
+
+      <hr style={{width: '100%', margin: '10px 0'}}/>
+
       <div>
         <h4>dicas</h4>
         <p>Use backspace para deletar nós e arestas</p>
