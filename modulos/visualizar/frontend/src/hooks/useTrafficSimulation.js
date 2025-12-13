@@ -32,6 +32,15 @@ export function useTrafficSimulation() {
     return () => ws.close();
   }, []);
 
+  useEffect(() => {
+    setEdges((eds) =>
+      eds.map((edge) => ({
+        ...edge,
+        data: { ...edge.data, maxVeiculos: Number(qtdVeiculos) },
+      }))
+    );
+  }, [qtdVeiculos, setEdges])
+
   const handleSocketMessage = (msg) => {
     const { topic, data } = msg;
 
@@ -88,8 +97,13 @@ export function useTrafficSimulation() {
   
   const onConnect = useCallback((params) => {
         if (isSimulating) return; 
-        setEdges((eds) => addEdge({ ...params, type: 'custom', animated: true, data: { queueCount: 0 } }, eds));
-  }, [isSimulating]);
+        setEdges((eds) => addEdge({ 
+            ...params, 
+            type: 'custom', 
+            animated: true, 
+            data: { queueCount: 0, maxVeiculos: Number(qtdVeiculos) }
+        }, eds));
+  }, [isSimulating, qtdVeiculos]);
 
   const onNodesDelete = useCallback((deleted) => {
       if (isSimulating) return;
