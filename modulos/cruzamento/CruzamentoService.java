@@ -60,7 +60,7 @@ public class CruzamentoService {
         System.out.println("Comando executado: " + comando + " para o cruzamento " + idCruzamentoAlvo + ". Novo status: " + novoStatus);
     }
 
-    // ATUALIZADO: Recebe a entidade Cruzamento para enviar dados de telemetria corretos.
+    //Recebe a entidade Cruzamento para enviar dados de telemetria corretos.
     private void enviarStatusAtual(Cruzamento cruzamento) {
 
         CruzamentoStatus status = new CruzamentoStatus();
