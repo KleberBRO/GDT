@@ -16,5 +16,8 @@ Analisa a situação atual das vias usando informações do sensor e envia coman
 Um módulo para simular a geração de veículos. Este simulador é o que "ativa" os Módulos Sensores, criando os dados para o sistema reagir.
 O veículo vai consultar o estado atual do grafo da cidade e procurar o caminho mais curto do ponto A para o ponto B, o ponto B será selecionado aleatoriamente.
 
+# Como rodar o projeto
+
+
 
 

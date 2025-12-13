@@ -23,8 +23,7 @@ class VeiculoSimulador:
             via = f"{origem}-{destino}"
             
             self.passo_atual += 1
-            if self.passo_atual >= len(self.rota_nodos) - 1:
-                self.concluido = True
+            # O veículo só é concluído após passar pela validação no processar_movimentos
             
             return via
         return None
@@ -35,13 +34,12 @@ class Simulador:
         self.rodando = False
         self.contador_veiculos = 0
         self.veiculos_ativos = [] 
+        self.max_veiculos = 50 # Valor padrão inicial
         
         self.grafo = defaultdict(list)
         self.nodos = []
         
-        # NOVO: Armazena a direção de entrada de cada via. Ex: {'1-2': 'N'}
         self.direcao_vias = {} 
-        # NOVO: Status dos semáforos.
         self.estado_cruzamentos = {}
 
         self.producer = KafkaProducer(
@@ -50,7 +48,7 @@ class Simulador:
         )
         self.consumer = KafkaConsumer(
             "sistema.configuracao",
-            "cruzamento.status", # Adicionado para ouvir os semáforos
+            "cruzamento.status",
             bootstrap_servers=[self.kafka_broker],
             value_deserializer=lambda m: json.loads(m.decode('utf-8')),
             group_id='simulador-group',
@@ -60,7 +58,7 @@ class Simulador:
     def construir_grafo(self, dados_grafo):
         """Reconstroi o grafo a partir do JSON recebido (formato u-v-D)."""
         self.grafo.clear()
-        self.direcao_vias.clear() # Limpa metadados antigos
+        self.direcao_vias.clear()
         
         self.nodos = dados_grafo.get('nodos', [])
         arestas = dados_grafo.get('arestas', [])
@@ -68,22 +66,16 @@ class Simulador:
         print(f"Construindo grafo com {len(self.nodos)} nodos e {len(arestas)} arestas.")
         
         for aresta in arestas:
-            # Esperado formato "origem-destino-direcao" (ex: "1-2-N")
             partes = aresta.split('-')
             if len(partes) >= 2:
                 origem = partes[0]
                 destino = partes[1]
-                
-                # Guarda a topologia
                 self.grafo[origem].append(destino)
-                
-                # Guarda a direção se existir (ex: 'N')
                 if len(partes) == 3:
                     direcao = partes[2]
                     self.direcao_vias[f"{origem}-{destino}"] = direcao
 
     def calcular_rota_bfs(self, inicio, fim):
-        # ... (Mantém igual ao original) ...
         if inicio == fim:
             return [inicio]
         fila = deque([[inicio]])
@@ -102,9 +94,10 @@ class Simulador:
         return None
 
     def gerar_veiculo(self):
-        # ... (Mantém igual ao original) ...
         if not self.nodos or not self.grafo:
             return
+        
+        # Tenta gerar um veículo com rota válida
         for _ in range(5):
             origem = random.choice(self.nodos)
             destino = random.choice(self.nodos)
@@ -119,59 +112,43 @@ class Simulador:
 
     def pode_passar(self, veiculo):
         """Verifica se o veículo pode entrar na próxima via baseado no semáforo."""
-        # Se ainda não começou a andar ou já terminou, não bloqueia
-        if veiculo.passo_atual == 0 or veiculo.concluido:
+        if veiculo.passo_atual == 0:
             return True
 
-        # O veículo está prestes a cruzar o nodo atual para ir para o próximo
-        # Ele veio de: rota[passo_atual - 1]
-        # Ele está em: rota[passo_atual] (O Cruzamento)
-        # Ele quer ir para: rota[passo_atual + 1] (mas a verificação de semáforo é na entrada do cruzamento)
-        
-        # Correção de lógica: O semáforo controla a entrada NO cruzamento vindo de uma via.
-        # Então olhamos a via que ele ACABOU de percorrer para chegar aqui.
         nodo_anterior = veiculo.rota_nodos[veiculo.passo_atual - 1]
         nodo_cruzamento = veiculo.rota_nodos[veiculo.passo_atual]
         
         via_chegada = f"{nodo_anterior}-{nodo_cruzamento}"
         direcao_chegada = self.direcao_vias.get(via_chegada)
         
-        # Pega o status do cruzamento (Padrão L-O aberto)
         status = self.estado_cruzamentos.get(nodo_cruzamento, 'L-O')
         
-        # Se não temos informação de direção, deixamos passar (fallback)
         if not direcao_chegada:
             return True
             
-        # Regras de Semáforo
         if status == 'N-S':
-            # Só passa quem vem do Norte ou Sul
-            if direcao_chegada in ['N', 'S']:
-                return True
-            else:
-                return False # Bloqueia Leste/Oeste
-                
+            return direcao_chegada in ['N', 'S']
         elif status == 'L-O':
-            # Só passa quem vem do Leste ou Oeste
-            if direcao_chegada in ['L', 'O']:
-                return True
-            else:
-                return False # Bloqueia Norte/Sul
+            return direcao_chegada in ['L', 'O']
         
-        # Se status for VERMELHO total ou outro desconhecido
         return False
 
     def processar_movimentos(self):
         """Itera sobre os veículos ativos e move eles para a próxima via."""
         for veiculo in self.veiculos_ativos[:]:
             
-            # --- VERIFICAÇÃO DE SEMÁFORO ---
-            # Só verificamos se ele ainda tem para onde ir
-            if veiculo.passo_atual < len(veiculo.rota_nodos) - 1:
-                # Se não puder passar, 'continue' pula o movimento deste carro neste ciclo (ele espera)
-                if not self.pode_passar(veiculo):
-                    continue
-            # -------------------------------
+            # Verifica se já chegou no destino final
+            if veiculo.passo_atual == len(veiculo.rota_nodos) - 1:
+                # Verifica semáforo do nó destino para "entrar" nele (sair da via)
+                if self.pode_passar(veiculo):
+                    print(f"Veículo {veiculo.veiculo_id} chegou ao destino.")
+                    veiculo.concluido = True
+                    self.veiculos_ativos.remove(veiculo)
+                continue
+
+            # Verifica semáforo para entrar na próxima via
+            if not self.pode_passar(veiculo):
+                continue
 
             via_atual = veiculo.obter_proxima_via()
             
@@ -186,10 +163,6 @@ class Simulador:
                     print(f"-> Carro {veiculo.veiculo_id} entrou na via {via_atual}")
                 except Exception as e:
                     print(f"Erro Kafka: {e}")
-            
-            if veiculo.concluido:
-                print(f"Veículo {veiculo.veiculo_id} chegou ao destino.")
-                self.veiculos_ativos.remove(veiculo)
 
     def escutar_comandos(self):
         print("Simulador: Ouvindo sistema.configuracao e cruzamento.status...")
@@ -203,6 +176,9 @@ class Simulador:
                     if tipo == "INICIAR_SIMULACAO":
                         print(">>> INICIAR SIMULAÇÃO RECEBIDO")
                         self.construir_grafo(dados.get("dados_grafo", {}))
+                        # Atualiza a quantidade máxima de veículos simultâneos
+                        self.max_veiculos = int(dados.get("qtd_veiculos", 50))
+                        print(f"População alvo de veículos: {self.max_veiculos}")
                         self.rodando = True
                     elif tipo == "PARAR_SIMULACAO":
                         print(">>> PARAR SIMULAÇÃO RECEBIDO")
@@ -211,7 +187,6 @@ class Simulador:
                         self.estado_cruzamentos.clear()
                 
                 elif topic == "cruzamento.status":
-                    # Atualiza o estado local do semáforo
                     c_id = dados.get("id_cruzamento")
                     c_status = dados.get("status_sinal")
                     self.estado_cruzamentos[c_id] = c_status
@@ -223,15 +198,15 @@ class Simulador:
         threading.Thread(target=self.escutar_comandos, daemon=True).start()
         print(f"Simulador iniciado (Broker: {self.kafka_broker})")
 
-        ultimo_spawn = datetime.now()
-        spawn_rate = 2.0 
-
         while True:
             if self.rodando:
-                agora = datetime.now()
-                if (agora - ultimo_spawn).total_seconds() > spawn_rate:
+                # Loop para "encher" a simulação até o limite máximo definido
+                # Isso cria vários veículos ao mesmo tempo se o número atual for baixo
+                while len(self.veiculos_ativos) < self.max_veiculos:
+                    # Se não houver nós (grafo vazio), evita loop infinito
+                    if not self.nodos:
+                        break
                     self.gerar_veiculo()
-                    ultimo_spawn = agora
 
                 self.processar_movimentos()
 
