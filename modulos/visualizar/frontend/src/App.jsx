@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import ReactFlow, { 
   addEdge, 
   Background, 
@@ -14,7 +14,6 @@ import './App.css';
 import NoCruzamento from './components/NoCruzamento';
 import CustomEdge from './components/CustomEdge';
 
-// Registrar o tipo de nó personalizado
 const nodeTypes = { trafficLight: NoCruzamento };
 const edgeTypes = { custom: CustomEdge };
 
@@ -35,29 +34,21 @@ export default function App() {
   const [qtdVeiculos, setQtdVeiculos] = useState(50);
   const [isSimulating, setIsSimulating] = useState(false);
 
+  // Mapeia ID_VEICULO -> ID_VIA_ATUAL (ex: "carro_1" -> "1-2")
+  const vehiclePositions = useRef({});
+
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:8000/ws');
-
-    ws.onopen = () => {
-      console.log('Conexão WebSocket estabelecida');
-    };
-
+    ws.onopen = () => console.log('WebSocket conectado');
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
         handleSocketMessage(message);
       } catch (error) {
-        console.error('Erro ao processar mensagem WebSocket:', error);
+        console.error('Erro WebSocket:', error);
       }
     };
-
-    ws.onclose = () => {
-      console.log('Conexão WebSocket fechada');
-    };
-
-    return () => {
-      ws.close();
-    };
+    return () => ws.close();
   }, []);
 
   const handleSocketMessage = (msg) => {
@@ -68,9 +59,8 @@ export default function App() {
         nds.map((node) => {
           if (node.id === data.id_cruzamento) {
             let visualStatus = 'VERMELHO';
-            if (data.status === 'N-S') visualStatus = 'VERDE';
-            else if (data.status === 'L-O') visualStatus = 'VERDE_H';
-
+            if (data.status_sinal === 'N-S') visualStatus = 'VERDE';
+            else if (data.status_sinal === 'L-O') visualStatus = 'VERDE_H';
             return {
               ...node,
               data: {
@@ -85,55 +75,69 @@ export default function App() {
         })
       );
     }
+
+    if (topic === 'sensor.veiculo') {
+      const { id_veiculo, id_via } = data;
+      const previousVia = vehiclePositions.current[id_veiculo];
+
+      // Atualiza o registro de onde o carro está
+      if (id_via === 'FIM') {
+        delete vehiclePositions.current[id_veiculo];
+      } else {
+        vehiclePositions.current[id_veiculo] = id_via;
+      }
+
+      setEdges((eds) => eds.map((edge) => {
+        // Reconstrói o ID da via baseado na aresta (origem-destino)
+        const edgeViaId = `${edge.source}-${edge.target}`;
+        
+        let newCount = edge.data.queueCount || 0;
+
+        // 1. Decrementa da via anterior (se houver)
+        if (previousVia && edgeViaId === previousVia) {
+           newCount = Math.max(0, newCount - 1);
+        }
+
+        // 2. Incrementa na via atual (se não for FIM)
+        if (id_via !== 'FIM' && edgeViaId === id_via) {
+           newCount += 1;
+        }
+
+        // Só atualiza se mudou algo (opcional, mas bom para performance)
+        if (newCount !== edge.data.queueCount) {
+            return {
+                ...edge,
+                data: { ...edge.data, queueCount: newCount }
+            };
+        }
+        return edge;
+      }));
+    }
   };
 
-  // Funções padrão do React Flow para mover nós e conectar arestas
-  const onNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-    []
-  );
-  const onEdgesChange = useCallback(
-    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-    []
-  );
+  const onNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), []);
+  const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
   
-  // Conectar duas vias (Cria uma aresta no grafo)
-  const onConnect = useCallback(
-      (params) => {
-        // Bloqueia conexão manual se estiver simulando (redundante com props, mas seguro)
+  const onConnect = useCallback((params) => {
         if (isSimulating) return; 
-        setEdges((eds) => addEdge({ 
-          ...params, 
-          type: 'custom', 
-          animated: true, 
-          data: { queueCount: 0 } 
-        }, eds));
-      },
-      [isSimulating]
-  );
+        setEdges((eds) => addEdge({ ...params, type: 'custom', animated: true, data: { queueCount: 0 } }, eds));
+  }, [isSimulating]);
 
-  const onNodesDelete = useCallback(
-    (deleted) => {
+  const onNodesDelete = useCallback((deleted) => {
       if (isSimulating) return;
       setEdges((eds) => {
         const connectedEdges = getConnectedEdges(deleted, eds);
-        return eds.filter(
-          (e) => !connectedEdges.some((ce) => ce.id === e.id)
-        );
+        return eds.filter((e) => !connectedEdges.some((ce) => ce.id === e.id));
       });
-    },
-    [isSimulating]
-  );
+    }, [isSimulating]);
 
   const onEdgeDoubleClick = useCallback((event, edge) => {
-    if (isSimulating) return; // Bloqueia deleção por duplo clique durante simulação
+    if (isSimulating) return; 
     setEdges((eds) => eds.filter((e) => e.id !== edge.id));
   }, [isSimulating]);
 
-  // Função para adicionar novo cruzamento (Requisito: adicionar novos cruzamentos )
   const addIntersection = () => {
     if (isSimulating) return;
-
     const newId = (nodes.length + 1).toString();
     const newNode = {
       id: newId,
@@ -144,30 +148,25 @@ export default function App() {
     setNodes((nds) => nds.concat(newNode));
   };
 
-const toggleSimulation = async () => {
+  const toggleSimulation = async () => {
     const eventType = isSimulating ? 'PARAR_SIMULACAO' : 'INICIAR_SIMULACAO';
     
+    if (!isSimulating) {
+        // Limpa contadores visuais e memória local de veículos ao iniciar
+        setEdges((eds) => eds.map(e => ({...e, data: { ...e.data, queueCount: 0 }})));
+        vehiclePositions.current = {};
+    }
+
     const arestasFormatadas = edges.map(e => {
         const sourceNode = nodes.find(n => n.id === e.source);
         const targetNode = nodes.find(n => n.id === e.target);
-        let dir = 'N'; // Valor padrão
-
+        let dir = 'N'; 
         if (sourceNode && targetNode) {
              const dx = targetNode.position.x - sourceNode.position.x;
              const dy = targetNode.position.y - sourceNode.position.y;
-             
-             // Verifica se é mais vertical ou horizontal
-             if (Math.abs(dx) > Math.abs(dy)) {
-                 // Horizontal
-                 // Se dx > 0, alvo está à direita, logo origem está à esquerda (Oeste/West)
-                 dir = dx > 0 ? 'O' : 'L'; 
-             } else {
-                 // Vertical
-                 // Se dy > 0, alvo está abaixo, logo origem está acima (Norte)
-                 dir = dy > 0 ? 'N' : 'S';
-             }
+             if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? 'O' : 'L'; 
+             else dir = dy > 0 ? 'N' : 'S';
         }
-        // Formato: 01-02-N
         return `${e.source}-${e.target}-${dir}`;
     });
 
@@ -176,7 +175,7 @@ const toggleSimulation = async () => {
       qtd_veiculos: isSimulating ? 0 : Number(qtdVeiculos),
       dados_grafo: {
         nodos: nodes.map(n => n.id),
-        arestas: arestasFormatadas // Usando a nova lista formatada
+        arestas: arestasFormatadas
       }
     };
 
@@ -186,9 +185,7 @@ const toggleSimulation = async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
       setIsSimulating(!isSimulating);
-
     } catch (error) {
       console.error('Erro ao comunicar com simulação:', error);
       alert('Falha ao comunicar com o servidor.');
@@ -197,43 +194,23 @@ const toggleSimulation = async () => {
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
-      {/* Barra de Ferramentas / Controles de Simulação */}
       <div className='controls-container'>
         <h3>Controle da Simulação</h3>
-
         <div>
         <label>Qtd Veículos:</label>
-        <input
-          type="number"
-          value={qtdVeiculos}
-          onChange={(e) => setQtdVeiculos(e.target.value)}
-          style={{ width: '60px', marginLeft: '5px' }}
-          min="1"
-        />
+        <input type="number" value={qtdVeiculos} onChange={(e) => setQtdVeiculos(e.target.value)} style={{ width: '60px', marginLeft: '5px' }} min="1" />
         </div>
-
-        <button 
-          onClick={addIntersection}
-          disabled={isSimulating}
-          className="control-button btn-add"
-        >+ Add Cruzamento</button>
-
-        <button onClick={toggleSimulation} 
-        className={`control-button ${isSimulating ? 'btn-stop' : ''}`}
-        >
+        <button onClick={addIntersection} disabled={isSimulating} className="control-button btn-add">+ Add Cruzamento</button>
+        <button onClick={toggleSimulation} className={`control-button ${isSimulating ? 'btn-stop' : ''}`}>
           {isSimulating ? "Parar Simulação" : "Iniciar Simulação"}
-          
         </button>
-
         <div>
           <h4>dicas</h4>
           <p>Use backspace para deletar nós e arestas</p>
           <p>preto = origem</p>
           <p>azul = destino</p>
         </div>
-
       </div>
-
       <ReactFlowProvider>
         <ReactFlow
           nodes={nodes}
@@ -245,10 +222,9 @@ const toggleSimulation = async () => {
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-
           nodesConnectable={!isSimulating} 
           elementsSelectable={!isSimulating}
-          deleteKeyCode={isSimulating ? null : ['Backspace', ['Delete']]}
+          deleteKeyCode={isSimulating ? null : ['Backspace', 'Delete']}
           fitView
         >
           <Background />
