@@ -13,4 +13,4 @@ COPY . .
 
 # Comando para rodar o simulador
 # Python -u faz o log aparecer instantaneamente no console do Docker
-CMD ["python", "-u", "simulador.py"]
+CMD ["python", "-u", "main.py"]

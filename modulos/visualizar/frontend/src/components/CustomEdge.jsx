@@ -36,8 +36,8 @@ export default function CustomEdge({
             position: 'absolute',
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             // Estilos para parecer uma etiqueta de trânsito ou contador
-            background: '#ffcc00',
-            padding: '4px 8px',
+            background: '#ffffffff',
+            padding: '4px 2px',
             borderRadius: '5px',
             fontSize: 12,
             fontWeight: 700,
@@ -45,7 +45,7 @@ export default function CustomEdge({
           }}
           className="nodrag nopan"
         >
-          {data?.queueCount || 0} 🚗
+          {data?.queueCount || 0}
         </div>
       </EdgeLabelRenderer>
     </>

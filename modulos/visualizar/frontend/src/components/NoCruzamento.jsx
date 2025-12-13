@@ -100,7 +100,7 @@ const noCruzamento = ({ data }) => {
       />
 
       <div>
-        ID: {data.id}
+        {data.id}
         
         {/* Aviso de Atraso */}
         <div style={{marginTop: 5}}>
