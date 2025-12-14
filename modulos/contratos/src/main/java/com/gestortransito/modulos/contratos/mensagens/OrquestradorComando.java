@@ -1,3 +1,4 @@
+package com.gestortransito.modulos.contratos.mensagens;
 public class OrquestradorComando {
     private String idCruzamentoAlvo;
     private String comando; //abrir ou fechar

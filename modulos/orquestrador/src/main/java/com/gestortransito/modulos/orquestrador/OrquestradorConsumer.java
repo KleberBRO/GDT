@@ -2,6 +2,8 @@ package com.gestortransito.modulos.orquestrador;
 
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import com.gestortransito.modulos.contratos.SistemaConfig;
+import com.gestortransito.modulos.contratos.mensagens.CruzamentoAlerta;
 
 @Component
 public class OrquestradorConsumer {
@@ -15,7 +17,6 @@ public class OrquestradorConsumer {
     //receber alertas para um comando imediato no tópico cruzamento.alerta
     @KafkaListener(topics = "cruzamento.alerta", groupId = "cruzamento-group")
     public void handleCruzamentoAlerta(CruzamentoAlerta alerta) {
-        System.out.println("Alerta do cruzamento de id " + alerta.getIdCruzamento() + " recebido pelo oquestrador. Prioridade: " + alerta.getPrioridade());
         orquestradorService.tratarAlerta(alerta); // Lógica de tratamento
     }
 

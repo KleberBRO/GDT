@@ -1,7 +1,10 @@
-//Consumidores muitas vezes recebem @Component porque sua principal responsabilidade é apenas ser um "ouvinte" que passa a mensagem adiante para o @Service principal (CruzamentoService) para processamento
+package com.gestortransito.modulos.cruzamento.kafka;
 
 import org.springframework.stereotype.Component;
-
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.annotation.KafkaListener;
+import com.gestortransito.modulos.contratos.mensagens.OrquestradorComando;
+import com.gestortransito.modulos.contratos.mensagens.SensorVeiculo;
 import com.gestortransito.modulos.cruzamento.CruzamentoService;
 
 @Component

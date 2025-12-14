@@ -2,6 +2,10 @@ package com.gestortransito.modulos.orquestrador;
 
 import org.springframework.stereotype.Service;
 
+import com.gestortransito.modulos.contratos.SistemaConfig;
+import com.gestortransito.modulos.contratos.mensagens.CruzamentoAlerta;
+import com.gestortransito.modulos.contratos.mensagens.OrquestradorComando;
+
 @Service
 public class OrquestradorService{
 

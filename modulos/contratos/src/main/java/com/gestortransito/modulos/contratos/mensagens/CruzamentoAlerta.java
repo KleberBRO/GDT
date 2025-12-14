@@ -1,3 +1,4 @@
+package com.gestortransito.modulos.contratos.mensagens;
 
 public class CruzamentoAlerta {
 

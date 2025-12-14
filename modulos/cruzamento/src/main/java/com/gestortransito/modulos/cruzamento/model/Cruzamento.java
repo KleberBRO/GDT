@@ -1,8 +1,12 @@
+package com.gestortransito.modulos.cruzamento.model;
+
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.util.HashMap;
 import java.util.Map;
+
+import com.gestortransito.modulos.cruzamento.enums.StatusSinal;
 
 
 @Entity

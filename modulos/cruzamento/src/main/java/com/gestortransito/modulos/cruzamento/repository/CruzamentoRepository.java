@@ -1,4 +1,6 @@
-// modulos/cruzamento/src/main/java/CruzamentoRepository.java
+package com.gestortransito.modulos.cruzamento.repository;
+
+import com.gestortransito.modulos.cruzamento.model.Cruzamento;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

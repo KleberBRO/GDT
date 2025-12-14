@@ -1,7 +1,9 @@
+package com.gestortransito.modulos.contratos;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import com.gestortransito.modulos.contratos.mensagens.*;
 
 @Data
 @NoArgsConstructor

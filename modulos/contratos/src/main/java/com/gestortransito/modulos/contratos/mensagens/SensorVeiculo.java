@@ -1,3 +1,5 @@
+package com.gestortransito.modulos.contratos.mensagens;
+
 public class SensorVeiculo {
 
     private String idVeiculo;

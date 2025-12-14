@@ -3,6 +3,8 @@ package com.gestortransito.modulos.orquestrador;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import com.gestortransito.modulos.contratos.mensagens.OrquestradorComando;
+
 @Service
 public class OrquestradorProducer{
 
@@ -16,7 +18,6 @@ public class OrquestradorProducer{
     public void enviarComando(OrquestradorComando comando){
         String key = comando.getIdCruzamentoAlvo();
         kafkaTemplate.send("orquestrador.comando", key, comando);
-        System.out.println("Comando "+ comando.comando +" para o cruzamento de id: " + idCruzamento);
 
     }
 

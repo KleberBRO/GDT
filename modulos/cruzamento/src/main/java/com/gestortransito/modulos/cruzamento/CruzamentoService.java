@@ -1,6 +1,14 @@
 package com.gestortransito.modulos.cruzamento;
 
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import com.gestortransito.modulos.contratos.mensagens.CruzamentoAlerta;
+import com.gestortransito.modulos.cruzamento.enums.OrquestradorComandos;
+import com.gestortransito.modulos.cruzamento.enums.StatusSinal;
+import com.gestortransito.modulos.cruzamento.kafka.CruzamentoProducer;
+import com.gestortransito.modulos.cruzamento.model.Cruzamento;
+import com.gestortransito.modulos.cruzamento.repository.CruzamentoRepository;
 
 @Service
 public class CruzamentoService {
