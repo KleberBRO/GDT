@@ -24,7 +24,7 @@ O veículo vai consultar o estado atual do grafo da cidade e procurar o caminho 
 ### inicializar sistema
 1. Vá para a pasta raiz do projeto
 2. abra o cmd ou terminal
-3. digitar o comando: `docker compose up -d --build`
+3. digitar o comando: `docker-compose up -d --build`
 4. esperar o zookeeper e kafka serem instalados e os módulos serem iniciados
 5. entrar na página `http://localhost:5173/`
 
