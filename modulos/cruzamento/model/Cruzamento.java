@@ -1,20 +1,23 @@
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.util.HashMap;
+import java.util.Map;
+
 
 @Entity
-@Lombok
 @Data
+@NoArgsConstructor
 public class Cruzamento {
 
     @Id
-    private String id; // Ex: "cruzamento_01"
-
-    // Mapeamento da fila de veículos por ID da via (Ex: "via_A_norte" -> 5 carros)
-    // Isso é mais robusto do que ter apenas um tamanhoFila
-    @ElementCollection // Para armazenar um Map como parte da entidade
+    private String id;
+    
+    // Mapeamento da fila de veículos por ID da via (Ex: "via_Vizinho2_para_X_Norte-Sul" -> 5 carros)
+    @ElementCollection
     private Map<String, Integer> filasPorVia;
 
-   // Semáforo para o sentido Horizontal (Leste-Oeste)
+    // Semáforo para o sentido Horizontal (Leste-Oeste)
     @Enumerated(EnumType.STRING)
     private StatusSinal statusSinalHorizontal;
 
@@ -22,25 +25,44 @@ public class Cruzamento {
     @Enumerated(EnumType.STRING)
     private StatusSinal statusSinalVertical;
 
-    // Usado para o monitoramento de 10 segundos para o sentido HORIZONTAL
-    // Armazena o timestamp de quando o PRIMEIRO carro parou no sentido HORIZONTAL
+    // Timestamp de quando o PRIMEIRO carro parou no sentido HORIZONTAL (para iniciar o timer)
     private long inicioEsperaHorizontal;
 
-    // Usado para o monitoramento de 10 segundos para o sentido VERTICAL
-    // Armazena o timestamp de quando o PRIMEIRO carro parou no sentido VERTICAL
+    // Timestamp de quando o PRIMEIRO carro parou no sentido VERTICAL (para iniciar o timer)
     private long inicioEsperaVertical;
-    
-
-    // Construtor default
-    public Cruzamento() {}
 
     /**
-     * Identifica a que semáforo a via pertence (Vertical ou Horizontal).
-     * Esta é uma função de 'mock' e deve ser adaptada à sua convenção de IDs de via.
+     * Construtor para inicialização de um novo cruzamento.
+     * Inicializa com um conjunto de vias mock para simulação.
+     */
+    public Cruzamento(String id) {
+        this.id = id;
+        this.filasPorVia = new HashMap<>();
+        
+        // Exemplo de inicialização de vias de MÃO DUPLA (4 vias de chegada/fila para este cruzamento)
+        
+        // Vias Verticais (Norte-Sul - sentindo para este cruzamento)
+        filasPorVia.put("via_" + id + "_para_VizinhoNorte_Norte-Sul", 0); // Vindo de cima/Norte
+        filasPorVia.put("via_VizinhoSul_para_" + id + "_Norte-Sul", 0); // Vindo de baixo/Sul
+        
+        // Vias Horizontais (Leste-Oeste - sentindo para este cruzamento)
+        filasPorVia.put("via_" + id + "_para_VizinhoLeste_Leste-Oeste", 0); // Vindo da direita/Leste
+        filasPorVia.put("via_VizinhoOeste_para_" + id + "_Leste-Oeste", 0); // Vindo da esquerda/Oeste
+
+        // Estado inicial alternado
+        this.statusSinalHorizontal = StatusSinal.VERDE;
+        this.statusSinalVertical = StatusSinal.VERMELHO;
+        this.inicioEsperaHorizontal = 0;
+        this.inicioEsperaVertical = 0;
+    }
+
+    /**
+     * Identifica a que semáforo a via pertence (Vertical ou Horizontal) 
+     * com base na sua nova convenção de nomenclatura.
      */
     public boolean isViaHorizontal(String idVia) {
-        // Exemplo: vias com "OESTE" ou "LESTE" são horizontais
-        return idVia.toUpperCase().contains("OESTE") || idVia.toUpperCase().contains("LESTE");
+        // Assume que a string "LESTE-OESTE" define o sentido horizontal
+        return idVia.toUpperCase().contains("LESTE-OESTE");
     }
 
     /**
@@ -53,5 +75,4 @@ public class Cruzamento {
             return statusSinalVertical;
         }
     }
-
 }
