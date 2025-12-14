@@ -1,3 +1,8 @@
+package com.gestortransito.modulos.orquestrador;
+
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
+
 @Component
 public class OrquestradorConsumer {
     private final OrquestradorService orquestradorService;

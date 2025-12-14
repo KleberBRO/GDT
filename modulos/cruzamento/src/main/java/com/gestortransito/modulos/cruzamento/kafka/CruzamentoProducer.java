@@ -1,4 +1,8 @@
 //Produtores recebem @Service porque eles contêm a regra de negócio de enviar/processar dados.
+
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+
 @Service
 public class CruzamentoProducer {
 

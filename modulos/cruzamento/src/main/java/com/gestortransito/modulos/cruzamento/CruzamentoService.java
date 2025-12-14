@@ -1,3 +1,7 @@
+package com.gestortransito.modulos.cruzamento;
+
+import org.springframework.stereotype.Service;
+
 @Service
 public class CruzamentoService {
 

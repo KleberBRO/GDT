@@ -1,4 +1,9 @@
 //Consumidores muitas vezes recebem @Component porque sua principal responsabilidade é apenas ser um "ouvinte" que passa a mensagem adiante para o @Service principal (CruzamentoService) para processamento
+
+import org.springframework.stereotype.Component;
+
+import com.gestortransito.modulos.cruzamento.CruzamentoService;
+
 @Component
 public class CruzamentoConsumer {
 
