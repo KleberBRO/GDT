@@ -17,16 +17,16 @@ public class CruzamentoConsumer {
 
     //recebe/consome as mensagens do sensor veículo (SensorVeiculo) no tópico sensor.veiculo
     //isso toda vez que um veículo chega na via
-    @KafkaListener(topics = "sensor.veiculo", groupId = "cruzamento-group") //<-----------------------------------------------implementar este tópico para o sensor enviar isso pelo seu Producer
+    @KafkaListener(topics = "sensor.veiculo", groupId = "cruzamento-group") 
     public void handleSensorVeiculo(SensorVeiculo veiculo) {
-        System.out.println("Veículo detectado em: " + veiculo.getIdVia() + " para o cruzamento: " + meuIdCruzamento));
+        System.out.println("Veículo detectado em: " + veiculo.getIdVia() + " para o cruzamento: " + meuIdCruzamento);
         cruzamentoService.adicionarVeiculoNaFila(veiculo.getIdVia(), meuIdCruzamento); // chama a lógica de serviço para atualizar a fila de veículos na via
     }
 
     //recebe/consome o comando OrquestradorComando do orquestrador no tópico orquestrador.comando
     //isso para abrir ou fechar o semáforo
     //@KafkaListener: Diz ao Spring para criar um Consumidor Kafka e vinculá-lo a esta função
-    @KafkaListener(topics = "orquestrador.comando", groupId = "cruzamento-group") //<-----------------------------------------------implementar este tópico para o orquestrador enviar isso pelo seu Producer
+    @KafkaListener(topics = "orquestrador.comando", groupId = "cruzamento-group") 
     public void handleOrquestradorComando(OrquestradorComando comando) {
 
         cruzamentoService.executarComando(comando.getIdCruzamentoAlvo(), comando.getComando());

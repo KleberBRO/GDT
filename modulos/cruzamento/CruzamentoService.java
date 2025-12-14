@@ -9,116 +9,141 @@ public class CruzamentoService {
         this.repository = repository;
     }
 
-    //quando um veículo chega no cruzamento
+    // 1. Quando um veículo chega no cruzamento
     public void adicionarVeiculoNaFila(String idVia, String idCruzamento) {
-        //Busca o cruzamento
+        // ... (Lógica igual, apenas atualizando a fila e o inicioEspera)
         Cruzamento cruzamento = repository.findById(idCruzamento)
-                .orElseThrow(() -> new RuntimeException("Cruzamento não encontrado: " + idCruzamento)); // [cite: 96] (Referência)
+                .orElseThrow(() -> new RuntimeException("Cruzamento não encontrado: " + idCruzamento));
 
-        //atualiza a fila da via específica
-        // Usa getOrDefault para obter o valor atual ou 0 se a via não existir no Map ainda.
+        // Atualiza a fila da via específica (assumindo que idVia é uma via de CHEGADA)
         int filaAtual = cruzamento.getFilasPorVia().getOrDefault(idVia, 0);
-        cruzamento.getFilasPorVia().put(idVia, filaAtual + 1); // Incrementa o contador da via
+        cruzamento.getFilasPorVia().put(idVia, filaAtual + 1);
 
-        // 3. Lógica de início de espera (se for o primeiro carro a chegar E o sinal estiver VERMELHO)
-        if (filaAtual == 0 && cruzamento.getStatusSinal() == StatusSinal.VERMELHO && cruzamento.getInicioEspera() == 0) {
-            cruzamento.setInicioEspera(System.currentTimeMillis()); //isso vai refletir em iniciarMonitoramento()
+        boolean isHorizontal = cruzamento.isViaHorizontal(idVia);
+        StatusSinal statusSinal = isHorizontal ? cruzamento.getStatusSinalHorizontal() : cruzamento.getStatusSinalVertical();
+        long inicioEspera = isHorizontal ? cruzamento.getInicioEsperaHorizontal() : cruzamento.getInicioEsperaVertical();
+
+        // Lógica de início de espera: se for o primeiro carro E o sinal estiver VERMELHO.
+        if (filaAtual == 0 && statusSinal == StatusSinal.VERMELHO && inicioEspera == 0) {
+            long novoTimestamp = System.currentTimeMillis();
+            if (isHorizontal) {
+                cruzamento.setInicioEsperaHorizontal(novoTimestamp);
+            } else {
+                cruzamento.setInicioEsperaVertical(novoTimestamp);
+            }
         }
 
-        repository.save(cruzamento);  // Salva a alteração
-        enviarStatusAtual(cruzamento); // Envia o status atual do cruzamento
+        repository.save(cruzamento);
     }
 
-   //segue o comando do orquestrador de abrir ou fechar
+    // 2. Executa o comando do orquestrador (sempre 'ABRIR')
     public void executarComando(String idCruzamentoAlvo, String comando) {
 
-        // busca o cruzamento
         Cruzamento cruzamento = repository.findById(idCruzamentoAlvo)
                 .orElseThrow(() -> new RuntimeException("Cruzamento alvo não encontrado: " + idCruzamentoAlvo));
 
-        StatusSinal novoStatus;
-        if (comando.toUpperCase().equals("ABRIR")) {
-            novoStatus = StatusSinal.VERDE;
-        } else if (comando.toUpperCase().equals("FECHAR")) {
-            novoStatus = StatusSinal.VERMELHO;
+        if (comando.toUpperCase().equals(OrquestradorComandos.ABRIR.name())) {
+            
+            // Lógica de INVERSÃO de estado dos dois semáforos (Vertical <-> Horizontal)
+            StatusSinal novoStatusHorizontal = (cruzamento.getStatusSinalHorizontal() == StatusSinal.VERDE) 
+                                                ? StatusSinal.VERMELHO : StatusSinal.VERDE;
+            StatusSinal novoStatusVertical = (cruzamento.getStatusSinalVertical() == StatusSinal.VERDE) 
+                                              ? StatusSinal.VERMELHO : StatusSinal.VERDE;
+
+            cruzamento.setStatusSinalHorizontal(novoStatusHorizontal);
+            cruzamento.setStatusSinalVertical(novoStatusVertical);
+
+            // Zera as filas e o contador de espera do sentido que acabou de abrir
+            
+            // Sentido HORIZONTAL acabou de abrir (ficou VERDE)
+            if (novoStatusHorizontal == StatusSinal.VERDE) {
+                // Zera as filas de todas as vias que são horizontais (vias de chegada)
+                cruzamento.getFilasPorVia().keySet().stream()
+                    .filter(cruzamento::isViaHorizontal)
+                    .forEach(key -> cruzamento.getFilasPorVia().put(key, 0));
+                cruzamento.setInicioEsperaHorizontal(0);
+            }
+            
+            // Sentido VERTICAL acabou de abrir (ficou VERDE)
+            if (novoStatusVertical == StatusSinal.VERDE) {
+                // Zera as filas de todas as vias que são verticais (vias de chegada)
+                cruzamento.getFilasPorVia().keySet().stream()
+                    .filter(key -> !cruzamento.isViaHorizontal(key)) // Filtra as verticais
+                    .forEach(key -> cruzamento.getFilasPorVia().put(key, 0));
+                cruzamento.setInicioEsperaVertical(0);
+            }
+
         } else {
-            System.err.println("Comando desconhecido recebido: " + comando);
+            System.err.println("Comando desconhecido ou FECHAR recebido: " + comando);
             return;
         }
 
-        cruzamento.setStatusSinal(novoStatus); //atualiza
-
-        // Se o sinal abriu, zera a fila de todas as vias e o contador de espera
-        if (novoStatus == StatusSinal.VERDE) {
-            cruzamento.getFilasPorVia().clear(); // Zera o Map inteiro
-            cruzamento.setInicioEspera(0);       // Zera o contador de espera
-        }
-
-        repository.save(cruzamento); //salva
-        enviarStatusAtual(cruzamento); //envia pro produtor que manda ao Orquestrador
-
-        System.out.println("Comando executado: " + comando + " para o cruzamento " + idCruzamentoAlvo + ". Novo status: " + novoStatus);
+        repository.save(cruzamento);
+        System.out.println("Comando executado: INVERSÃO para o cruzamento " + idCruzamentoAlvo + 
+                           ". Novo status: H: " + cruzamento.getStatusSinalHorizontal() + 
+                           " | V: " + cruzamento.getStatusSinalVertical());
     }
 
-    //Recebe a entidade Cruzamento para enviar dados de telemetria corretos.
-    private void enviarStatusAtual(Cruzamento cruzamento) {
-
-        CruzamentoStatus status = new CruzamentoStatus();
-        status.setIdCruzamento(cruzamento.getId()); // Usa o ID real do cruzamento [cite: 105] (Referência)
-        status.setStatusSinal(cruzamento.getStatusSinal().name()); // Usa o status real (VERDE/VERMELHO) [cite: 100] (Referência)
-
-        // Calcula o tamanho total da fila (soma de todas as filas por via)
-        int tamanhoTotalFila = cruzamento.getFilasPorVia().values().stream()
-                .mapToInt(Integer::intValue)
-                .sum();
-
-        status.setTamanhoFila(tamanhoTotalFila); // Envia o tamanho total da fila
-        status.setTimestamp(System.currentTimeMillis() / 1000); // [cite: 105] (Referência)
-
-        producer.enviarStatus(status); // [cite: 106] (Referência)
-    }
-
-    // Inicia um loop para checar alertas periodicamente e enviar status
-    //executa a cada 5 segundos para checar o limite de 1 minuto.
-    @Scheduled(fixedRate = 5000) // 5000ms = 5 segundos
+    // 3. Monitoramento de Espera (Limite alterado para 10 segundos)
+    @Scheduled(fixedRate = 5000) // 5 segundos
     private void iniciarMonitoramento() {
-        //itera sobre todos os cruzamentos gerenciados pelo módulo
+        final long LIMITE_ESPERA_MS = 10 * 1000; // 10 segundos
+
         repository.findAll().forEach(cruzamento -> {
-
-            //pega os atributos do cruzamento da vez
-            int tamanhoFila = cruzamento.getTamanhoFila();
-            String statusSinal = cruzamento.getStatusSinal().toString(); // Usando enum
-            long inicioEspera = cruzamento.getInicioEspera();
-
-            // se tiver veículo na fila e o sinal está VERMELHO...
-            if (tamanhoFila > 0 && statusSinal.equals(StatusSinal.VERMELHO.name())) {
-
-                long tempoDecorrido = System.currentTimeMillis() - inicioEspera; //calcula o tempo de demora
-                final long LIMITE_ESPERA_MS = 60 * 1000; // 1 minuto
-
-                if (tempoDecorrido >= LIMITE_ESPERA_MS) { //se bater este 1 minuto, emite alerta
-
-                    System.out.println("[ALERTA] Cruzamento " + cruzamento.getId() + ": espera excedida!");
-
-                    // cria a mensagem CruzamentoAlerta e manda o produtor enviar
-                    CruzamentoAlerta alerta = new CruzamentoAlerta();
-                    alerta.setIdCruzamento(cruzamento.getId());
-                    alerta.setMensagem("Tempo de espera excedido: Prioridade na mudança de sinal.");
-                    alerta.setTempoEsperaSegundos((int) (tempoDecorrido / 1000));
-                    alerta.setPrioridade("ALTA"); //<--------------------------------------------------------------------lembrar de levar em conta estes status de prioridade ao fazer o Orquestrador
-
-                    producer.enviarAlerta(alerta);
-
-                    cruzamento.setInicioEspera(System.currentTimeMillis());//reinicia a contágem de tempo
-                    repository.save(cruzamento); // Salva a mudança no banco (JPA)
-                }
-            } else { //se o sinal está verde, não conta tempo e zera o tempo que estava contando para ser ativado só quando tiver um veículo denovo
-                // Se o sinal abriu ou a fila zerou, garante que o contador de espera zere.
-                if (cruzamento.getInicioEspera() != 0) {
-                    cruzamento.setInicioEspera(0);
-                    repository.save(cruzamento);
-                }
-            }
+            checarEAlertar(cruzamento, true, LIMITE_ESPERA_MS); // Horizontal
+            checarEAlertar(cruzamento, false, LIMITE_ESPERA_MS); // Vertical
         });
     }
+    
+    // Método auxiliar para checar e alertar para um sentido específico
+    private void checarEAlertar(Cruzamento cruzamento, boolean isHorizontal, final long LIMITE_ESPERA_MS) {
+        
+        StatusSinal statusSinal = isHorizontal ? cruzamento.getStatusSinalHorizontal() : cruzamento.getStatusSinalVertical();
+        long inicioEspera = isHorizontal ? cruzamento.getInicioEsperaHorizontal() : cruzamento.getInicioEsperaVertical();
+        
+        // Verifica se há carros na fila de alguma via neste sentido
+        boolean temCarroNaFila = cruzamento.getFilasPorVia().entrySet().stream()
+                                    .filter(entry -> cruzamento.isViaHorizontal(entry.getKey()) == isHorizontal)
+                                    .anyMatch(entry -> entry.getValue() > 0);
+
+        if (temCarroNaFila && statusSinal == StatusSinal.VERMELHO && inicioEspera > 0) {
+            
+            long tempoDecorrido = System.currentTimeMillis() - inicioEspera;
+
+            if (tempoDecorrido >= LIMITE_ESPERA_MS) {
+                String sentido = isHorizontal ? "HORIZONTAL" : "VERTICAL";
+                System.out.println("[ALERTA] Cruzamento " + cruzamento.getId() + " - Sentido " + sentido + ": espera excedida (10s)!");
+
+                // Cria e envia a mensagem CruzamentoAlerta (SEM PRIORIDADE)
+                CruzamentoAlerta alerta = new CruzamentoAlerta();
+                alerta.setIdCruzamento(cruzamento.getId());
+                alerta.setMensagem("Tempo de espera excedido no sentido " + sentido + ". Inversão de sinal solicitada.");
+                alerta.setTempoEsperaSegundos((int) (tempoDecorrido / 1000));
+                // O campo 'prioridade' foi removido conforme sua solicitação
+
+                producer.enviarAlerta(alerta);
+
+                // Reinicia a contagem de tempo para este semáforo, para evitar spam de alertas
+                long novoTimestamp = System.currentTimeMillis();
+                if (isHorizontal) {
+                    cruzamento.setInicioEsperaHorizontal(novoTimestamp);
+                } else {
+                    cruzamento.setInicioEsperaVertical(novoTimestamp);
+                }
+                repository.save(cruzamento);
+            }
+        } else if (statusSinal == StatusSinal.VERDE || !temCarroNaFila) { 
+            // Se o sinal abriu ou a fila zerou, garante que o contador de espera zere.
+            if (inicioEspera != 0) {
+                if (isHorizontal) {
+                    cruzamento.setInicioEsperaHorizontal(0);
+                } else {
+                    cruzamento.setInicioEsperaVertical(0);
+                }
+                repository.save(cruzamento);
+            }
+        }
+    }
+
+
 }

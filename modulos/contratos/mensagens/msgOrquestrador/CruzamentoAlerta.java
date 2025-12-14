@@ -4,7 +4,6 @@ public class CruzamentoAlerta {
     private String idCruzamento;
     private String mensagem;
     private int tempoEsperaSegundos;
-    private String prioridade;
 
     public String getIdCruzamento() {
         return idCruzamento;
@@ -30,11 +29,5 @@ public class CruzamentoAlerta {
         this.tempoEsperaSegundos = tempoEsperaSegundos;
     }
 
-    public String getPrioridade() {
-        return prioridade;
-    }
 
-    public void setPrioridade(String prioridade) {
-        this.prioridade = prioridade;
-    }
 }

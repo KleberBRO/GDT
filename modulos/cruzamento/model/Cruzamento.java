@@ -14,21 +14,44 @@ public class Cruzamento {
     @ElementCollection // Para armazenar um Map como parte da entidade
     private Map<String, Integer> filasPorVia;
 
-    @Enumerated(EnumType.STRING) // Salva o nome da enum no banco (VERDE, VERMELHO)
-    private StatusSinal statusSinal;
+   // Semáforo para o sentido Horizontal (Leste-Oeste)
+    @Enumerated(EnumType.STRING)
+    private StatusSinal statusSinalHorizontal;
 
-    // Usado para o monitoramento de 1 minuto
-    private long inicioEspera;
+    // Semáforo para o sentido Vertical (Norte-Sul)
+    @Enumerated(EnumType.STRING)
+    private StatusSinal statusSinalVertical;
 
-    // Construtor, Getters e Setters
+    // Usado para o monitoramento de 10 segundos para o sentido HORIZONTAL
+    // Armazena o timestamp de quando o PRIMEIRO carro parou no sentido HORIZONTAL
+    private long inicioEsperaHorizontal;
 
-    // Construtor para inicialização
-    public Cruzamento(String id) {
-        this.id = id;
-        this.filasPorVia = new HashMap<>();
-        this.statusSinal = StatusSinal.VERMELHO; // Inicia sempre no vermelho
-        this.inicioEspera = 0;
-    }
+    // Usado para o monitoramento de 10 segundos para o sentido VERTICAL
+    // Armazena o timestamp de quando o PRIMEIRO carro parou no sentido VERTICAL
+    private long inicioEsperaVertical;
+    
+
     // Construtor default
     public Cruzamento() {}
+
+    /**
+     * Identifica a que semáforo a via pertence (Vertical ou Horizontal).
+     * Esta é uma função de 'mock' e deve ser adaptada à sua convenção de IDs de via.
+     */
+    public boolean isViaHorizontal(String idVia) {
+        // Exemplo: vias com "OESTE" ou "LESTE" são horizontais
+        return idVia.toUpperCase().contains("OESTE") || idVia.toUpperCase().contains("LESTE");
+    }
+
+    /**
+     * Obtém o status do semáforo que a via deve seguir.
+     */
+    public StatusSinal getStatusSinalParaVia(String idVia) {
+        if (isViaHorizontal(idVia)) {
+            return statusSinalHorizontal;
+        } else {
+            return statusSinalVertical;
+        }
+    }
+
 }

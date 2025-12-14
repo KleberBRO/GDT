@@ -15,10 +15,4 @@ public class OrquestradorProducer{
 
     }
 
-    //evento para o Visualisar no tópico visualizar.evento
-    public void enviarEvento(OrquestradorEvento evento){
-
-    }
-
-
 }

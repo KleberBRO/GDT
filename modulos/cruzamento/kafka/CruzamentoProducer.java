@@ -13,29 +13,17 @@ public class CruzamentoProducer {
     } //construtor
 
 
-    //envia a mensgagem do tipo CruzamentoStatus do semáforo para o orquestrador, no tópico cruzamento.telemetria declarado no send
-    public void enviarStatus(CruzamentoStatus status) {
-        // A chave (key) da mensagem deve ser o ID do cruzamento (importante para particionamento)
-        String key = status.getIdCruzamento();
-
-        //enviar dados ao Kafka
-        //cruzamento.telemetria = O nome do tópico para onde a mensagem será enviada
-        //key = O ID do cruzamento
-        //status= O objeto CruzamentoStatus
-        kafkaTemplate.send("cruzamento.telemetria", key, status) //<-----------------------------------------------implementar este tópico para o orquestrador comsumir isso [implementar orquetsrador consumidor]
+    //envia alerta(CruzamentoAlerta) de uma espera longa no tópico cruzamento.alerta para o orquestrador consumir
+    public void enviarAlerta(CruzamentoAlerta alerta) {
+        String idCruzamento= alerta.getIdCruzamento();// A chave (key) da mensagem deve ser o ID do cruzamento (importante para particionamento)
+        kafkaTemplate.send("cruzamento.alerta", idCruzamento, alerta) 
                 .whenComplete((result, ex) -> {
                     if (ex == null) { //ex é uma exceção que pode ocorrer no send
-                        System.out.println("Status enviado! Cruzamento: " + key);
+                        System.out.println("Alerta enviado! Cruzamento: " + idCruzamento);
                     } else {
-                        System.err.println("Erro ao enviar status: " + ex.getMessage());
+                        System.err.println("Erro ao enviar Alerta: " + ex.getMessage());
                     }
                 });
-    }
-
-    //envia alerta de uma espera longa no tópico cruzamento.alerta para o orquestrador
-    public void enviarAlerta(CruzamentoAlerta alerta) {
-        String idCruzamento= alerta.getIdCruzamento();
-        kafkaTemplate.send("cruzamento.alerta", idCruzamento, alerta); //<-----------------------------------------------implementar este tópico para o orquestrador comsumir isso [implementar orquetsrador consumidor]
         System.out.println("Alerta de espera longa para: " + idCruzamento);
     }
 }
