@@ -58,9 +58,9 @@ class MotorSimulacao:
     def enviar_evento_veiculo(self, veiculo, id_via):
         try:
             self.producer.send(config.TOPIC_VEICULO, {
-                "idVeiculo": f"carro_{veiculo.veiculo_id}",
-                "idVia": id_via,
-                "timestamp": int(datetime.now().timestamp() * 1000)  # milliseconds
+                "id_veiculo": f"carro_{veiculo.veiculo_id}",
+                "id_via": id_via,
+                "timestamp": int(datetime.now().timestamp())
             })
         except Exception as e:
             print(f"Erro Kafka: {e}")
@@ -125,7 +125,6 @@ class MotorSimulacao:
                         print(f"[ERRO] Grafo sem nodos! Nodos: {self.grafo_manager.nodos}")
                         break
                     self.gerar_veiculo()
-                    print(f"[VEICULO] Novo veículo gerado. Total: {len(self.veiculos_ativos)}")
                 
                 self.processar_movimentos()
             
