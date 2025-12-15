@@ -1,0 +1,9 @@
+/workspaces/GDT/modulos/cruzamento/src/main/java/com/gestortransito/modulos/cruzamento/kafka/CruzamentoConsumer.java
+/workspaces/GDT/modulos/cruzamento/src/main/java/com/gestortransito/modulos/cruzamento/kafka/CruzamentoProducer.java
+/workspaces/GDT/modulos/cruzamento/src/main/java/com/gestortransito/modulos/cruzamento/CruzamentoService.java
+/workspaces/GDT/modulos/cruzamento/src/main/java/com/gestortransito/modulos/cruzamento/CruzamentoApplication.java
+/workspaces/GDT/modulos/cruzamento/src/main/java/com/gestortransito/modulos/cruzamento/model/Cruzamento.java
+/workspaces/GDT/modulos/cruzamento/src/main/java/com/gestortransito/modulos/cruzamento/repository/CruzamentoRepository.java
+/workspaces/GDT/modulos/cruzamento/src/main/java/com/gestortransito/modulos/cruzamento/kafka/JsonDeserializer.java
+/workspaces/GDT/modulos/cruzamento/src/main/java/com/gestortransito/modulos/cruzamento/enums/StatusSinal.java
+/workspaces/GDT/modulos/cruzamento/src/main/java/com/gestortransito/modulos/cruzamento/enums/OrquestradorComandos.java

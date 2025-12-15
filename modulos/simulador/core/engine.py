@@ -58,9 +58,9 @@ class MotorSimulacao:
     def enviar_evento_veiculo(self, veiculo, id_via):
         try:
             self.producer.send(config.TOPIC_VEICULO, {
-                "id_veiculo": f"carro_{veiculo.veiculo_id}",
-                "id_via": id_via,
-                "timestamp": int(datetime.now().timestamp())
+                "idVeiculo": f"carro_{veiculo.veiculo_id}",
+                "idVia": id_via,
+                "timestamp": int(datetime.now().timestamp() * 1000)  # milliseconds
             })
         except Exception as e:
             print(f"Erro Kafka: {e}")
@@ -112,12 +112,20 @@ class MotorSimulacao:
         threading.Thread(target=self.escutar_comandos, daemon=True).start()
         print(f"Simulador iniciado (Broker: {config.KAFKA_BROKER})")
         
+        contador_ciclos = 0
         while True:
             if self.rodando:
+                contador_ciclos += 1
+                if contador_ciclos % 10 == 0:  # Log a cada 10 ciclos (10 segundos)
+                    print(f"[CICLO {contador_ciclos}] Rodando={self.rodando}, Veículos ativos={len(self.veiculos_ativos)}/{self.max_veiculos}, Nodos={len(self.grafo_manager.nodos)}")
+                
                 # Gera novos veículos se necessário
                 while len(self.veiculos_ativos) < self.max_veiculos:
-                    if not self.grafo_manager.nodos: break
+                    if not self.grafo_manager.nodos: 
+                        print(f"[ERRO] Grafo sem nodos! Nodos: {self.grafo_manager.nodos}")
+                        break
                     self.gerar_veiculo()
+                    print(f"[VEICULO] Novo veículo gerado. Total: {len(self.veiculos_ativos)}")
                 
                 self.processar_movimentos()
             

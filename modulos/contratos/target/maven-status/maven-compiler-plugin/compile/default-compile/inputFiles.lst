@@ -1,0 +1,9 @@
+/workspaces/GDT/modulos/contratos/src/main/java/com/gestortransito/modulos/contratos/mensagens/OrquestradorComandos.java
+/workspaces/GDT/modulos/contratos/src/main/java/com/gestortransito/modulos/contratos/mensagens/CruzamentoConfig.java
+/workspaces/GDT/modulos/contratos/src/main/java/com/gestortransito/modulos/contratos/mensagens/OrquestradorComando.java
+/workspaces/GDT/modulos/contratos/src/main/java/com/gestortransito/modulos/contratos/mensagens/SensorVeiculo.java
+/workspaces/GDT/modulos/contratos/src/main/java/com/gestortransito/modulos/contratos/mensagens/DadosGrafoSimples.java
+/workspaces/GDT/modulos/contratos/src/main/java/com/gestortransito/modulos/contratos/mensagens/DadosGrafo.java
+/workspaces/GDT/modulos/contratos/src/main/java/com/gestortransito/modulos/contratos/mensagens/SistemaConfig.java
+/workspaces/GDT/modulos/contratos/src/main/java/com/gestortransito/modulos/contratos/mensagens/SistemaConfigSimplificado.java
+/workspaces/GDT/modulos/contratos/src/main/java/com/gestortransito/modulos/contratos/mensagens/CruzamentoAlerta.java

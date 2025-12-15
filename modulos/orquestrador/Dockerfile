@@ -6,13 +6,8 @@ WORKDIR /build
 # Instala Maven
 RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
 
-# Copia o pom.xml e mensagens do contratos (dependência)
-COPY contratos/pom.xml contratos/
-COPY contratos/mensagens contratos/mensagens
-
-# Copia o pom.xml e código do orquestrador
-COPY orquestrador/pom.xml orquestrador/
-COPY orquestrador orquestrador/
+# Copia tudo de modulos/ para /build/
+COPY . .
 
 # Build do contratos primeiro (dependência)
 RUN cd contratos && mvn clean install -DskipTests

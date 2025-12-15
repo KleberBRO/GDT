@@ -3,6 +3,8 @@ package com.gestortransito.modulos.cruzamento.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,8 +20,12 @@ public class Cruzamento {
     private String id;
     
     // Mapeamento da fila de veículos por ID da via (Ex: "via_Vizinho2_para_X_Norte-Sul" -> 5 carros)
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     private Map<String, Integer> filasPorVia;
+
+    // Orientação das vias: true = horizontal, false = vertical (persistida para ficar estável)
+    @ElementCollection(fetch = FetchType.EAGER)
+    private Map<String, Boolean> orientacaoPorVia = new HashMap<>();
 
     // Semáforo para o sentido Horizontal (Leste-Oeste)
     @Enumerated(EnumType.STRING)
@@ -34,6 +40,20 @@ public class Cruzamento {
 
     // Timestamp de quando o PRIMEIRO carro parou no sentido VERTICAL (para iniciar o timer)
     private long inicioEsperaVertical;
+
+    /**
+     * Construtor para inicialização com um mapa pré-existente de filas.
+     * Usado quando a topologia é recebida do orquestrador/front.
+     */
+    public Cruzamento(String id, Map<String, Integer> filasPorVia) {
+        this.id = id;
+        this.filasPorVia = (filasPorVia != null) ? new HashMap<>(filasPorVia) : new HashMap<>();
+        inicializarOrientacao();
+        this.statusSinalHorizontal = StatusSinal.VERDE;
+        this.statusSinalVertical = StatusSinal.VERMELHO;
+        this.inicioEsperaHorizontal = 0;
+        this.inicioEsperaVertical = 0;
+    }
 
     /**
      * Construtor para inicialização de um novo cruzamento.
@@ -53,6 +73,8 @@ public class Cruzamento {
         filasPorVia.put("via_" + id + "_para_VizinhoLeste_Leste-Oeste", 0); // Vindo da direita/Leste
         filasPorVia.put("via_VizinhoOeste_para_" + id + "_Leste-Oeste", 0); // Vindo da esquerda/Oeste
 
+        inicializarOrientacao();
+
         // Estado inicial alternado
         this.statusSinalHorizontal = StatusSinal.VERDE;
         this.statusSinalVertical = StatusSinal.VERMELHO;
@@ -61,12 +83,30 @@ public class Cruzamento {
     }
 
     /**
+     * Atualiza todas as filas deste cruzamento com o mapa informado.
+     */
+    public void atualizarFilas(Map<String, Integer> novasFilas) {
+        this.filasPorVia = (novasFilas != null) ? new HashMap<>(novasFilas) : new HashMap<>();
+        inicializarOrientacao();
+    }
+
+    /**
      * Identifica a que semáforo a via pertence (Vertical ou Horizontal) 
      * com base na sua nova convenção de nomenclatura.
      */
     public boolean isViaHorizontal(String idVia) {
-        // Assume que a string "LESTE-OESTE" define o sentido horizontal
-        return idVia.toUpperCase().contains("LESTE-OESTE");
+        if (idVia == null) {
+            return false;
+        }
+        Boolean orientacao = orientacaoPorVia.get(idVia);
+        if (orientacao != null) {
+            return orientacao;
+        }
+
+        // Fallback: mantém consistência pela ordem de inserção alternando sentidos.
+        boolean calculada = (orientacaoPorVia.size() % 2 == 0);
+        orientacaoPorVia.put(idVia, calculada);
+        return calculada;
     }
 
     /**
@@ -77,6 +117,15 @@ public class Cruzamento {
             return statusSinalHorizontal;
         } else {
             return statusSinalVertical;
+        }
+    }
+
+    private void inicializarOrientacao() {
+        orientacaoPorVia.clear();
+        var vias = new ArrayList<>(filasPorVia.keySet());
+        Collections.sort(vias);
+        for (int i = 0; i < vias.size(); i++) {
+            orientacaoPorVia.put(vias.get(i), i % 2 == 0);
         }
     }
 }

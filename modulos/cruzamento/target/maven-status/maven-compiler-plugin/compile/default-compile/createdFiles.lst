@@ -1,0 +1,9 @@
+com/gestortransito/modulos/cruzamento/repository/CruzamentoRepository.class
+com/gestortransito/modulos/cruzamento/model/Cruzamento.class
+com/gestortransito/modulos/cruzamento/kafka/CruzamentoConsumer.class
+com/gestortransito/modulos/cruzamento/kafka/JsonDeserializer.class
+com/gestortransito/modulos/cruzamento/CruzamentoApplication.class
+com/gestortransito/modulos/cruzamento/CruzamentoService.class
+com/gestortransito/modulos/cruzamento/enums/StatusSinal.class
+com/gestortransito/modulos/cruzamento/enums/OrquestradorComandos.class
+com/gestortransito/modulos/cruzamento/kafka/CruzamentoProducer.class

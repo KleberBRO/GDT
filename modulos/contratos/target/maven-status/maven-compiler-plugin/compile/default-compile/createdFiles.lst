@@ -1,0 +1,10 @@
+com/gestortransito/modulos/contratos/mensagens/SensorVeiculo.class
+com/gestortransito/modulos/contratos/mensagens/SistemaConfigSimplificado.class
+com/gestortransito/modulos/contratos/mensagens/DadosGrafo.class
+com/gestortransito/modulos/contratos/mensagens/DadosGrafo$ConexaoVia.class
+com/gestortransito/modulos/contratos/mensagens/DadosGrafoSimples.class
+com/gestortransito/modulos/contratos/mensagens/SistemaConfig.class
+com/gestortransito/modulos/contratos/mensagens/CruzamentoConfig.class
+com/gestortransito/modulos/contratos/mensagens/OrquestradorComando.class
+com/gestortransito/modulos/contratos/mensagens/CruzamentoAlerta.class
+com/gestortransito/modulos/contratos/mensagens/OrquestradorComandos.class
